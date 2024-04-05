@@ -128,7 +128,9 @@ void RECV_MESSAGE(int CLIENT_SOCKET) {
   }
 }
 
-std::string COLOR(int RANDOM) { return colors[RANDOM % NUM]; }
+std::string COLOR(int RANDOM) { 
+  return colors[RANDOM % NUM];
+ }
 
 void Erase_Text(int cnt) {
   char back_space = 8;
