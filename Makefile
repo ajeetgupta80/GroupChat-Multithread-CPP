@@ -1,37 +1,29 @@
-CC = g++
-CFLAGS = -Wall -Wextra -std=c++11
+CXX = g++
+CXXFLAGS = -std=c++11 -Wall
+BINDIR = bin
 
-# Define the source files for the server and client
-SERVER_SRC = server.cpp socketutil.cpp
-CLIENT_SRC = client.cpp socketutil.cpp
+SRCS_SERVER = server.cpp sockutil.cpp
+SRCS_CLIENT = client.cpp sockutil.cpp
+OBJS_SERVER = $(patsubst %.cpp,$(BINDIR)/%.o,$(SRCS_SERVER))
+OBJS_CLIENT = $(patsubst %.cpp,$(BINDIR)/%.o,$(SRCS_CLIENT))
+TARGET_SERVER = server
+TARGET_CLIENT = client
 
-# Define the object files for the server and client
-SERVER_OBJ = $(SERVER_SRC:.cpp=.o)
-CLIENT_OBJ = $(CLIENT_SRC:.cpp=.o)
+all: $(TARGET_SERVER) $(TARGET_CLIENT)
 
-# Define the target executable names
-SERVER_EXE = server.exe
-CLIENT_EXE = client.exe
+$(TARGET_SERVER): $(OBJS_SERVER)
+	$(CXX) $(CXXFLAGS) -o $@ $^
 
-all: $(SERVER_EXE) $(CLIENT_EXE)
+$(TARGET_CLIENT): $(OBJS_CLIENT)
+	$(CXX) $(CXXFLAGS) -o $@ $^
 
-# Compile server source files
-$(SERVER_OBJ): %.o: %.cpp
-	$(CC) $(CFLAGS) -c $< -o $@
+$(BINDIR)/%.o: %.cpp | $(BINDIR)
+	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-# Compile client source files
-$(CLIENT_OBJ): %.o: %.cpp
-	$(CC) $(CFLAGS) -c $< -o $@
-
-# Link server object files into the server executable
-$(SERVER_EXE): $(SERVER_OBJ)
-	$(CC) $(CFLAGS) $^ -o $@
-
-# Link client object files into the client executable
-$(CLIENT_EXE): $(CLIENT_OBJ)
-	$(CC) $(CFLAGS) $^ -o $@
+$(BINDIR):
+	mkdir -p $(BINDIR)
 
 clean:
-	rm -f $(SERVER_OBJ) $(CLIENT_OBJ) $(SERVER_EXE) $(CLIENT_EXE)
+	rm -rf $(BINDIR) $(TARGET_SERVER) $(TARGET_CLIENT)
 
 .PHONY: all clean
