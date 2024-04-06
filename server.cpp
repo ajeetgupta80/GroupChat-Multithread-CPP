@@ -7,6 +7,7 @@
 #include <mutex>
 #include <netinet/in.h>
 #include <string.h>
+#include <string>
 #include <strings.h>
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -31,8 +32,10 @@ void BROADCASTING(std::string message, int SENDER_ID);
 void END_CON(int ID);
 void Shared_Print(std::string str, bool endline);
 void BROADCAST_ID_FOR_COLOR(int num, int SENDER_ID);
-int main(int argc, char *argv[]) {
+int GET_CLIENT_COUNT();
+std::string GetClientsInfo();
 
+int main(int argc, char *argv[]) {
   if (argc < 2) {
     std::cout << "argument in wrong order" << std::endl;
     return 0;
@@ -105,6 +108,8 @@ void SET_NAME(int id, char name[]) {
   }
 }
 
+int GET_CLIENT_COUNT() { return clients.size(); }
+
 void HANDLE_CLIENT(int client_socket, int id) {
   char name[MAX_LEN];
   char msg[MAX_LEN];
@@ -135,6 +140,18 @@ void HANDLE_CLIENT(int client_socket, int id) {
       Shared_Print(color(id) + bye + def_col, true);
       END_CON(id);
       return;
+    }
+
+    if (strcmp(msg, "#gc") == 0) {
+      uint16_t COUNT = GET_CLIENT_COUNT();
+      std::string INFO = GetClientsInfo();
+      //  "number of active members ->: " + std::to_string(COUNT);
+      char buff[MAX_LEN] = "NEW_CON";
+
+      send(client_socket, buff, sizeof(buff), 0);
+      send(client_socket, &id, sizeof(id), 0);
+      send(client_socket, INFO.c_str(), INFO.length(), 0);
+      continue;
     }
 
     BROADCASTING(std::string(name), id);
@@ -174,6 +191,17 @@ void END_CON(int ID) {
       break;
     }
   }
+}
+
+std::string GetClientsInfo() {
+  std::string clientInfo = "Active Members:\n";
+
+  for (const auto &client : clients) {
+    clientInfo +=
+        "ID: " + std::to_string(client.id) + ", Name: " + client.name + "\n";
+  }
+
+  return clientInfo;
 }
 
 void Shared_Print(std::string msg, bool endline = true) {
