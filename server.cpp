@@ -71,7 +71,7 @@ int main(int argc, char *argv[]) {
   // std::cout << colors[NUM - 1]
   //          << "\n\t ===== server is listening... =====" << def_col
   //           << std::endl;
-  std::cout << colors[NUM - 1]
+  std::cout << colors[NUM - 6]
             << "\n\t  ▄████▄   ██░ ██  ▄▄▄     ▄▄▄█████▓     ██████ ▓█████  "
                "██▀███   ██▒   █▓▓█████  ██▀███  \n"
                "\t▒██▀ ▀█  ▓██░ ██▒▒████▄   ▓  ██▒ ▓▒   ▒██    ▒ ▓█   ▀ ▓██ ▒ "
@@ -85,7 +85,8 @@ int main(int argc, char *argv[]) {
                "\t░ ░▒ ▒  ░ ▒ ░░▒░▒ ▒▒   ▓▒█░ ▒ ░░      ▒ ▒▓▒ ▒ ░░░ ▒░ ░░ ▒▓ "
                "░▒▓░   ░ ▐░  ░░ ▒░ ░░ ▒▓ ░▒▓░\n"
                "\t  ░  ▒    ▒ ░▒░ ░  ▒   ▒▒ ░   ░       ░ ░▒  ░ ░ ░ ░  ░\n";
-
+  std::cout << std::endl;
+  std::cout << std::endl;
   struct sockaddr_in client_addr;
   int client_socket;
 
@@ -130,8 +131,9 @@ void HANDLE_CLIENT(int client_socket, int id) {
   SET_NAME(id, name);
 
   // welcome bitch
-  std::string WELCOME =
-      std::string(name) + std::string(" has joined the party");
+  std::string WELCOME = std::string("                        ") +
+                        std::string(name) +
+                        std::string(" has joined the party");
   // std::cout << colors[NUM - 3] << WELCOME << std::endl;
   BROADCASTING("NEW_CON", id);
   BROADCAST_ID_FOR_COLOR(id, id);
@@ -146,7 +148,8 @@ void HANDLE_CLIENT(int client_socket, int id) {
     if (strcmp(msg, "#exit") == 0) {
 
       // leaving message
-      std::string bye = std::string(name) + std::string(" has left");
+      std::string bye = std::string("                        ") +
+                        std::string(name) + std::string(" has left");
       BROADCASTING("NEW_CON", id);
       BROADCAST_ID_FOR_COLOR(id, id);
       BROADCASTING(bye, id);
@@ -200,8 +203,8 @@ void HANDLE_CLIENT(int client_socket, int id) {
     BROADCASTING(std::string(name), id);
     BROADCAST_ID_FOR_COLOR(id, id);
     BROADCASTING(std::string(msg), id);
-    Shared_Print(color(id) + std::string(name) + " : " + def_col +
-                     std::string(msg),
+    Shared_Print(color(id) + std::string("                        ") +
+                     std::string(name) + " : " + def_col + std::string(msg),
                  true);
   }
 }
@@ -230,7 +233,6 @@ void END_CON(int ID) {
       std::lock_guard<std::mutex> guard(client_mtx);
       clients[i].th.detach();
       clients.erase(clients.begin() + i);
-      close(clients[i].socket);
       break;
     }
   }
