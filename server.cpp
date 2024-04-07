@@ -47,8 +47,6 @@ int main(int argc, char *argv[]) {
   if (server_socket < 0) {
     std::cout << "failed to create socket" << std::endl;
     exit(-1);
-  } else {
-    std::cout << "socket created succesfully " << std::endl;
   }
 
   struct sockaddr_in server_addr;
@@ -70,9 +68,24 @@ int main(int argc, char *argv[]) {
     exit(-1);
   }
 
+  // std::cout << colors[NUM - 1]
+  //          << "\n\t ===== server is listening... =====" << def_col
+  //           << std::endl;
   std::cout << colors[NUM - 1]
-            << "\n\t ===== server is listening... =====" << def_col
-            << std::endl;
+            << "\n\t  ▄████▄   ██░ ██  ▄▄▄     ▄▄▄█████▓     ██████ ▓█████  "
+               "██▀███   ██▒   █▓▓█████  ██▀███  \n"
+               "\t▒██▀ ▀█  ▓██░ ██▒▒████▄   ▓  ██▒ ▓▒   ▒██    ▒ ▓█   ▀ ▓██ ▒ "
+               "██▒▓██░   █▒▓█   ▀ ▓██ ▒ ██▒\n"
+               "\t▒▓█    ▄ ▒██▀▀██░▒██  ▀█▄ ▒ ▓██░ ▒░   ░ ▓██▄   ▒███   ▓██ "
+               "░▄█ ▒ ▓██  █▒░▒███   ▓██ ░▄█ ▒\n"
+               "\t▒▓▓▄ ▄██▒░▓█ ░██ ░██▄▄▄▄██░ ▓██▓ ░      ▒   ██▒▒▓█  ▄ "
+               "▒██▀▀█▄    ▒██ █░░▒▓█  ▄ ▒██▀▀█▄  \n"
+               "\t▒ ▓███▀ ░░▓█▒░██▓ ▓█   ▓██▒ ▒██▒ ░    ▒██████▒▒░▒████▒░██▓ "
+               "▒██▒   ▒▀█░  ░▒████▒░██▓ ▒██▒\n"
+               "\t░ ░▒ ▒  ░ ▒ ░░▒░▒ ▒▒   ▓▒█░ ▒ ░░      ▒ ▒▓▒ ▒ ░░░ ▒░ ░░ ▒▓ "
+               "░▒▓░   ░ ▐░  ░░ ▒░ ░░ ▒▓ ░▒▓░\n"
+               "\t  ░  ▒    ▒ ░▒░ ░  ▒   ▒▒ ░   ░       ░ ░▒  ░ ░ ░ ░  ░\n";
+
   struct sockaddr_in client_addr;
   int client_socket;
 
@@ -152,6 +165,36 @@ void HANDLE_CLIENT(int client_socket, int id) {
       send(client_socket, &id, sizeof(id), 0);
       send(client_socket, INFO.c_str(), INFO.length(), 0);
       continue;
+    }
+    if (strcmp(msg, "#cli") == 0) {
+      std::cout << " cli function hitted" << std::endl;
+      char target[MAX_LEN];
+      recv(client_socket, target, sizeof(target), 0);
+
+      int target_socket = -1;
+      for (const auto &client : clients) {
+        if (client.name == std::string(target)) {
+          target_socket = client.socket;
+          break;
+        }
+      }
+
+      if (target_socket != -1) {
+        std::string baat =
+            "You are now chatting separately with " + std::string(name);
+        // send(target_socket, baat.c_str(), sizeof(baat), 0);
+        char buff[MAX_LEN] = "NEW_CON";
+
+        send(target_socket, buff, sizeof(buff), 0);
+        send(target_socket, &id, sizeof(id), 0);
+        send(target_socket, baat.c_str(), baat.length(), 0);
+        std::string bat =
+            "You are now chatting separately with " + std::string(target);
+        // send(client_socket, bat.c_str(), sizeof(bat), 0);
+      } else {
+        std::string tar_msg = "target not found";
+        send(client_socket, tar_msg.c_str(), sizeof(tar_msg), 0);
+      }
     }
 
     BROADCASTING(std::string(name), id);

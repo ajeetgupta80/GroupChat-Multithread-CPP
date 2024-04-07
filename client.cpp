@@ -9,6 +9,7 @@
 #include <iostream>
 #include <mutex>
 #include <netinet/in.h>
+#include <signal.h>
 #include <string.h>
 #include <strings.h>
 #include <sys/socket.h>
@@ -34,6 +35,7 @@ void SEND_MESSAGE(int CLIENT_SOCKET);
 void RECV_MESSAGE(int CLIENT_SOCKET);
 std::string COLOR(int RANDOM);
 void Erase_Text(int cnt);
+void CATCH_CTRL_C(int signal);
 
 int main(int argc, char *argv[]) {
 
@@ -63,7 +65,7 @@ int main(int argc, char *argv[]) {
     exit(-1);
   }
   // std::cout << "connected to the server " << std::endl;
-
+  signal(SIGINT, CATCH_CTRL_C);
   char name[MAX_LEN];
   std::cout << "Enter your name : ";
   std::cin.getline(name, MAX_LEN);
@@ -100,6 +102,13 @@ void SEND_MESSAGE(int CLIENT_SOCKET) {
       t_recv.detach();
       close(CLIENT_SOCKET);
       return;
+    } else if (strcmp(msg, "#cli") == 0) {
+      std::cout << "enter client name: ";
+
+      char target[MAX_LEN];
+      std::cin.getline(target, MAX_LEN);
+      send(CLIENT_SOCKET, "#cli", sizeof("#cli"), 0);
+      send(CLIENT_SOCKET, target, sizeof(target), 0);
     }
   }
 }
@@ -135,4 +144,13 @@ void Erase_Text(int cnt) {
   for (int i = 0; i < cnt; ++i) {
     std::cout << back_space;
   }
+}
+void CATCH_CTRL_C(int signal) {
+  char terminate[MAX_LEN] = "#exit";
+  send(CLIENT_SOCKET, terminate, sizeof(terminate), 0);
+  EXIT_FLAG = true;
+  t_send.detach();
+  t_recv.detach();
+  close(CLIENT_SOCKET);
+  exit(signal);
 }
