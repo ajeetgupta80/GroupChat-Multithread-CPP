@@ -71,8 +71,8 @@ int main(int argc, char *argv[]) {
   std::cin.getline(name, MAX_LEN);
   send(CLIENT_SOCKET, name, sizeof(name), 0);
 
-  std::cout << colors[NUM - 1] << "\n\t  ====== Welcome to the chat-room "
-            << name << " =======" << std::endl
+  std::cout << colors[NUM - 1] << "\n\t  ======> [Welcome to the chat-room] "
+            << name << "<=======" << std::endl
             << def_col;
 
   std::thread t1(SEND_MESSAGE, CLIENT_SOCKET);
@@ -127,10 +127,12 @@ void RECV_MESSAGE(int CLIENT_SOCKET) {
     recv(CLIENT_SOCKET, &rand, sizeof(rand), 0);
     recv(CLIENT_SOCKET, msg, sizeof(msg), 0);
     Erase_Text(6);
-    if (strcmp(name, "NEW_CON") != 0) {
-      std::cout << COLOR(rand) << name << " : " << def_col << msg << std::endl;
-    } else {
+    if (strcmp(name, "NEW_CON") == 0) {
       std::cout << COLOR(rand) << msg << std::endl;
+    } else if (strcmp(name, "NEW_CONN") == 0) {
+      std::cout << COLOR(rand) << msg << std::endl;
+    } else {
+      std::cout << COLOR(rand) << name << " : " << def_col << msg << std::endl;
     }
     std::cout << colors[1] << "You : " << def_col;
     fflush(stdout);

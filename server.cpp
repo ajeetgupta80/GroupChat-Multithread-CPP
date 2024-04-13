@@ -1,9 +1,12 @@
 #include "sockutil.h"
+#include <algorithm>
 #include <arpa/inet.h>
+#include <cstddef>
 #include <cstdint>
 #include <cstdio>
 #include <errno.h>
 #include <iostream>
+#include <list>
 #include <mutex>
 #include <netinet/in.h>
 #include <string.h>
@@ -13,6 +16,7 @@
 #include <sys/types.h>
 #include <thread>
 #include <unistd.h>
+#include <unordered_map>
 #include <vector>
 
 #define NUM 6
@@ -34,6 +38,115 @@ void Shared_Print(std::string str, bool endline);
 void BROADCAST_ID_FOR_COLOR(int num, int SENDER_ID);
 int GET_CLIENT_COUNT();
 std::string GetClientsInfo();
+void SAVE_TO_CACHE(int u_id, std::string msg);
+std::string Get_old_message();
+
+// cache implementation with previous 5 messages
+class LRUCache {
+public:
+  struct Node {
+    std::string key;
+    std::string value;
+    Node *prev;
+    Node *next;
+    Node(const std::string &k, const std::string &v) {
+      key = k;
+      value = v;
+    }
+  };
+
+  std::unordered_map<std::string, Node *> cacheMap;
+  std::list<Node *> cacheList;
+  int capacity;
+
+public:
+  LRUCache(int cap) { capacity = cap; }
+
+  void put(const std::string &key, const std::string &value) {
+
+    if (cacheList.size() >= capacity) {
+      Node *last = cacheList.back();
+      cacheMap.erase(last->key);
+      cacheList.pop_back();
+      delete last;
+    }
+    Node *newNode = new Node(key, value);
+    cacheList.push_front(newNode);
+    cacheMap[key] = newNode;
+  }
+
+private:
+  void update(Node *node) {
+    cacheList.erase(find(cacheList.begin(), cacheList.end(), node));
+    cacheList.push_front(node);
+  }
+};
+
+// cache implementation with replacing key so only latest message from each
+// client
+class Cache {
+public:
+  struct Node {
+    std::string key;
+    std::string value;
+    Node *prev;
+    Node *next;
+    Node() {
+      key = "";
+      value = "";
+    }
+    Node(const std::string &k, const std::string &v) {
+      key = k;
+      value = v;
+    }
+  };
+  std::unordered_map<std::string, Node *> cacheMap;
+  Node *head = new Node();
+  Node *tail = new Node();
+  int CAPACITY;
+
+  Cache(int cap) {
+    CAPACITY = cap;
+    head->next = tail;
+    tail->prev = head;
+  }
+
+  void ADD_Node(Node *newnode);
+  void Del_Node(Node *newnode);
+  void PUT_DATA(const std::string &key, const std::string &value);
+};
+
+void Cache::PUT_DATA(const std::string &key, const std::string &value) {
+  if (cacheMap.find(key) != cacheMap.end()) {
+    Node *exist = cacheMap[key];
+    cacheMap.erase(key);
+    Del_Node(exist);
+  }
+  if (cacheMap.size() == CAPACITY) {
+    cacheMap.erase(tail->prev->key);
+    Del_Node(tail->prev);
+  }
+  ADD_Node(new Node(key, value));
+  cacheMap[key] = head->next;
+}
+
+void Cache::Del_Node(Node *delnode) {
+  Node *nodeprev = delnode->prev;
+  Node *nodenext = delnode->next;
+  nodeprev->next = nodenext;
+  nodenext->prev = nodeprev;
+}
+
+void Cache::ADD_Node(Node *newnode) {
+  Node *temp = head->next;
+  newnode->next = temp;
+  newnode->prev = head;
+  head->next = newnode;
+  temp->prev = newnode;
+}
+
+Cache cache(5);
+// LRUCache cache(5);
 
 int main(int argc, char *argv[]) {
   if (argc < 2) {
@@ -125,6 +238,7 @@ void SET_NAME(int id, char name[]) {
 int GET_CLIENT_COUNT() { return clients.size(); }
 
 void HANDLE_CLIENT(int client_socket, int id) {
+
   char name[MAX_LEN];
   char msg[MAX_LEN];
   recv(client_socket, name, sizeof(name), 0);
@@ -169,6 +283,7 @@ void HANDLE_CLIENT(int client_socket, int id) {
       send(client_socket, INFO.c_str(), INFO.length(), 0);
       continue;
     }
+
     if (strcmp(msg, "#cli") == 0) {
       std::cout << " cli function hitted" << std::endl;
       char target[MAX_LEN];
@@ -199,14 +314,31 @@ void HANDLE_CLIENT(int client_socket, int id) {
         send(client_socket, tar_msg.c_str(), sizeof(tar_msg), 0);
       }
     }
+    if (strcmp(msg, "#getmsg") == 0) {
+
+      std::string INFO_MSG = Get_old_message();
+
+      //  "number of active members ->: " + std::to_string(COUNT);
+      char buff[MAX_LEN] = "NEW_CONN";
+      size_t INFO_SIZE = INFO_MSG.size();
+      send(client_socket, buff, sizeof(buff), 0);
+      send(client_socket, &id, sizeof(id), 0);
+      send(client_socket, INFO_MSG.c_str(), INFO_SIZE, 0);
+      continue;
+    }
 
     BROADCASTING(std::string(name), id);
     BROADCAST_ID_FOR_COLOR(id, id);
+    SAVE_TO_CACHE(id, msg);
     BROADCASTING(std::string(msg), id);
     Shared_Print(color(id) + std::string("                        ") +
                      std::string(name) + " : " + def_col + std::string(msg),
                  true);
   }
+}
+
+void SAVE_TO_CACHE(int id, std::string msg) {
+  cache.PUT_DATA(std::to_string(id), msg);
 }
 
 void BROADCAST_ID_FOR_COLOR(int num, int SENDER_ID) {
@@ -247,6 +379,17 @@ std::string GetClientsInfo() {
   }
 
   return clientInfo;
+}
+
+std::string Get_old_message() {
+  std::string oldmsg = "last 5 messages:\n";
+
+  for (const auto &it : cache.cacheMap) {
+
+    // Append the ID to the message
+    oldmsg += "ID: " + it.first + " msg: " + it.second->value + "\n";
+  }
+  return oldmsg;
 }
 
 void Shared_Print(std::string msg, bool endline = true) {
